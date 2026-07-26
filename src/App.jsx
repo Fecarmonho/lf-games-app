@@ -6,12 +6,12 @@ import { getFirestore, collection, doc, onSnapshot, setDoc, deleteDoc } from "fi
 import { getAuth, signInAnonymously, onAuthStateChanged } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBJuNKZiviHpz9a75snOVL8d2aUqCum8gs",
-  authDomain: "verictasports-app.firebaseapp.com",
-  projectId: "verictasports-app",
-  storageBucket: "verictasports-app.firebasestorage.app",
-  messagingSenderId: "165174346583",
-  appId: "1:165174346583:web:e53cb0f4c1258ed6daf412"
+  apiKey: "AIzaSyBIr9egtBxjjdXaIMGLKYlxsyitz4Vx_vk",
+  authDomain: "lf-games-app.firebaseapp.com",
+  projectId: "lf-games-app",
+  storageBucket: "lf-games-app.firebasestorage.app",
+  messagingSenderId: "864404535098",
+  appId: "1:864404535098:web:a2253048e79b812ff0c203"
 };
 
 const app = initializeApp(firebaseConfig);
