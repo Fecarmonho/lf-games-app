@@ -115,8 +115,8 @@ const CSS = `
     transition: transform 0.3s cubic-bezier(.4,0,.2,1);
     z-index: 100;
   }
-  .sidebar-logo { padding: 22px 20px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
-  .logo-img { width: 38px; height: 38px; border-radius: 50%; background: transparent; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+  .sidebar-logo { padding: 20px 20px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+  .logo-img { width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; filter: drop-shadow(0 0 6px rgba(255,45,77,0.25)); }
   .logo-img img { width: 100%; height: 100%; object-fit: contain; }
   .logo-name { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 2px; color: var(--accent); line-height: 1; }
   .logo-sub { font-size: 10px; color: var(--text2); letter-spacing: 1px; text-transform: uppercase; margin-top: 2px; }
@@ -267,7 +267,7 @@ const CSS = `
   .mobile-navbar { display: none; position: fixed; top: 0; left: 0; right: 0; height: 60px; background: var(--surface); border-bottom: 1px solid var(--border); z-index: 101; align-items: center; padding: 0 16px; gap: 12px; }
   .mobile-menu-btn { background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 8px; cursor: pointer; color: var(--text); display: flex; align-items: center; justify-content: center; }
   .mobile-logo { display: flex; align-items: center; gap: 10px; flex: 1; }
-  .mobile-logo-img { width: 38px; height: 38px; border-radius: 50%; background: transparent; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+  .mobile-logo-img { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .mobile-logo-img img { width: 100%; height: 100%; object-fit: contain; }
   .mobile-logo-name { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 2px; color: var(--accent); line-height: 1; }
   .mobile-menu-btn svg { width:18px; height:18px; display:block; }
