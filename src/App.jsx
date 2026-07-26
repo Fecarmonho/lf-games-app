@@ -1839,7 +1839,7 @@ function Estoque({ dados, onAdicionar, onRemover, onAtualizar, onAdicionarVarian
   const [editando, setEditando] = useState(null);
   const [confirmId, setConfirmId] = useState(null);
   const [expandidos, setExpandidos] = useState({});
-  const [form, setForm] = useState({ nome: "", descricao: "", precoCompra: "", precoVenda: "", quantidadeEstoque: "", quantidadeMinima: "5", imagem: "", categoria: "", console: "", marca: "", condicao: "Novo", fornecedor: "" });
+  const [form, setForm] = useState({ nome: "", descricao: "", precoCompra: "", precoVenda: "", quantidadeEstoque: "", quantidadeMinima: "5", imagem: "", categoria: "", console: "", marca: "", condicao: "Novo", fornecedor: "", linkML: "", destaque: false });
   const fornecedoresCad = dados.fornecedores || [];
   const [enviandoImagem, setEnviandoImagem] = useState(false);
   const [novaVariante, setNovaVariante] = useState({ label: "", estoque: "" });
@@ -1868,8 +1868,8 @@ function Estoque({ dados, onAdicionar, onRemover, onAtualizar, onAdicionarVarian
   }, 0);
 
   function abrirModal(p = null) {
-    if (p) { setEditando(p.id); setForm({ nome: p.nome, descricao: p.descricao || "", precoCompra: p.precoCompra, precoVenda: p.precoVenda, quantidadeEstoque: p.quantidadeEstoque, quantidadeMinima: p.quantidadeMinima, imagem: p.imagem || "", categoria: p.categoria || "", console: p.console || "", marca: p.marca || "", condicao: p.condicao || "Novo", fornecedor: p.fornecedor || "" }); }
-    else { setEditando(null); setForm({ nome: "", descricao: "", precoCompra: "", precoVenda: "", quantidadeEstoque: "", quantidadeMinima: "5", imagem: "", categoria: "", console: "", marca: "", condicao: "Novo", fornecedor: "" }); }
+    if (p) { setEditando(p.id); setForm({ nome: p.nome, descricao: p.descricao || "", precoCompra: p.precoCompra, precoVenda: p.precoVenda, quantidadeEstoque: p.quantidadeEstoque, quantidadeMinima: p.quantidadeMinima, imagem: p.imagem || "", categoria: p.categoria || "", console: p.console || "", marca: p.marca || "", condicao: p.condicao || "Novo", fornecedor: p.fornecedor || "", linkML: p.linkML || "", destaque: !!p.destaque }); }
+    else { setEditando(null); setForm({ nome: "", descricao: "", precoCompra: "", precoVenda: "", quantidadeEstoque: "", quantidadeMinima: "5", imagem: "", categoria: "", console: "", marca: "", condicao: "Novo", fornecedor: "", linkML: "", destaque: false }); }
     setModal(true);
   }
 
@@ -1895,7 +1895,7 @@ function Estoque({ dados, onAdicionar, onRemover, onAtualizar, onAdicionarVarian
     e.preventDefault();
     if (!form.nome.trim()) return toast("Preencha o nome", "error");
     if (!form.precoVenda || parseFloat(form.precoVenda) <= 0) return toast("Preço de venda inválido", "error");
-    const d = { nome: form.nome, descricao: form.descricao, precoCompra: parseFloat(form.precoCompra) || 0, precoVenda: parseFloat(form.precoVenda), quantidadeEstoque: parseInt(form.quantidadeEstoque) || 0, quantidadeMinima: parseInt(form.quantidadeMinima) || 5, imagem: form.imagem || "", categoria: form.categoria || "", console: form.console || "", marca: form.marca || "", condicao: form.condicao || "Novo", fornecedor: form.fornecedor || "" };
+    const d = { nome: form.nome, descricao: form.descricao, precoCompra: parseFloat(form.precoCompra) || 0, precoVenda: parseFloat(form.precoVenda), quantidadeEstoque: parseInt(form.quantidadeEstoque) || 0, quantidadeMinima: parseInt(form.quantidadeMinima) || 5, imagem: form.imagem || "", categoria: form.categoria || "", console: form.console || "", marca: form.marca || "", condicao: form.condicao || "Novo", fornecedor: form.fornecedor || "", linkML: form.linkML || "", destaque: !!form.destaque };
     if (editando) { onAtualizar(editando, d); toast("Produto atualizado"); }
     else { onAdicionar(d); toast("Produto adicionado"); }
     setModal(false);
@@ -2057,6 +2057,11 @@ function Estoque({ dados, onAdicionar, onRemover, onAtualizar, onAdicionarVarian
               )}
             </div>
             <div className="input-group" style={{ gridColumn: "1 / -1" }}><label className="input-label">Descrição</label><input className="input" value={form.descricao} onChange={e => set("descricao", e.target.value)} /></div>
+            <div className="input-group" style={{ gridColumn: "1 / -1" }}><label className="input-label">Link do Mercado Livre (opcional)</label><input className="input" placeholder="https://produto.mercadolivre.com.br/..." value={form.linkML} onChange={e => set("linkML", e.target.value)} /></div>
+            <div className="input-group" style={{ gridColumn: "1 / -1", flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <input type="checkbox" id="destaque-check" checked={form.destaque} onChange={e => set("destaque", e.target.checked)} style={{ width: 18, height: 18, accentColor: "var(--accent)" }} />
+              <label htmlFor="destaque-check" className="input-label" style={{ margin: 0, cursor: "pointer" }}>⭐ Destacar este produto na loja online</label>
+            </div>
             <div className="input-group"><label className="input-label">Preço de Compra</label><input className="input" type="number" step="0.01" min="0" value={form.precoCompra} onChange={e => set("precoCompra", e.target.value)} /></div>
             <div className="input-group"><label className="input-label">Preço de Venda *</label><input className="input" type="number" step="0.01" min="0" value={form.precoVenda} onChange={e => set("precoVenda", e.target.value)} /></div>
             {margemForm !== null && (
