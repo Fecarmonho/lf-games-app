@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import logoImg from "./logo.png";
+import mascoteImg from "./mascote.png";
 
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, doc, onSnapshot, setDoc, deleteDoc } from "firebase/firestore";
@@ -139,6 +140,12 @@ const CSS = `
   .main { flex: 1; overflow-y: auto; display: flex; flex-direction: column; min-width: 0; }
   .page { padding: 36px 48px; flex: 1; max-width: 1600px; width: 100%; margin: 0 auto; }
   .page-header { margin-bottom: 28px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .page { position: relative; overflow-x: hidden; }
+  .page-art { position: absolute; right: 24px; opacity: 0.16; pointer-events: none; z-index: 0; filter: saturate(1.1); }
+  .page-art img, .page-art svg { width: 100%; height: auto; display: block; }
+  .page-art-left { right: auto; left: 24px; }
+  .page > *:not(.page-art) { position: relative; z-index: 1; }
+  @media (max-width: 1000px) { .page-art { display: none; } }
   .page-title { font-size: 28px; color: var(--text); line-height: 1; }
   .page-sub { font-size: 13px; color: var(--text2); margin-top: 4px; }
 
@@ -421,6 +428,54 @@ const Icon = ({ name, size = 16 }) => {
     </svg>
   );
 };
+
+// ─────────────────────────────────────────────
+// ILUSTRAÇÕES DECORATIVAS DE FUNDO (por aba)
+// ─────────────────────────────────────────────
+const PAGE_ART_SVG = {
+  trofeu: (
+    <svg viewBox="0 0 200 200"><path d="M60 30h80v20a40 40 0 0 1-80 0V30z" fill="#f5a623"/><path d="M60 35H30a25 25 0 0 0 25 30" fill="none" stroke="#f5a623" strokeWidth="8"/><path d="M140 35h30a25 25 0 0 1-25 30" fill="none" stroke="#f5a623" strokeWidth="8"/><rect x="90" y="80" width="20" height="35" fill="#f5a623"/><rect x="65" y="115" width="70" height="14" rx="4" fill="#f5a623"/><rect x="75" y="129" width="50" height="16" rx="4" fill="#e8951a"/></svg>
+  ),
+  moedas: (
+    <svg viewBox="0 0 200 200"><circle cx="70" cy="130" r="42" fill="#f5a623"/><circle cx="70" cy="130" r="30" fill="none" stroke="#e8951a" strokeWidth="4"/><circle cx="120" cy="90" r="42" fill="#ffce54"/><circle cx="120" cy="90" r="30" fill="none" stroke="#f5a623" strokeWidth="4"/><circle cx="150" cy="140" r="30" fill="#f5a623"/><circle cx="150" cy="140" r="20" fill="none" stroke="#e8951a" strokeWidth="3"/></svg>
+  ),
+  controle: (
+    <svg viewBox="0 0 200 200"><path d="M50 90c0-16 14-28 34-28h32c20 0 34 12 34 28v40c0 14-10 24-22 24-8 0-14-6-18-14l-4-8h-12l-4 8c-4 8-10 14-18 14-12 0-22-10-22-24V90z" fill="#3ea6ff"/><circle cx="70" cy="100" r="6" fill="#1a3a52"/><circle cx="70" cy="118" r="6" fill="#1a3a52"/><rect x="61" y="109" width="18" height="8" rx="2" fill="#1a3a52"/><circle cx="142" cy="102" r="7" fill="#1a3a52"/><circle cx="158" cy="118" r="7" fill="#1a3a52"/></svg>
+  ),
+  headset: (
+    <svg viewBox="0 0 200 200"><path d="M40 120a60 60 0 0 1 120 0" fill="none" stroke="#a259ff" strokeWidth="10" strokeLinecap="round"/><rect x="30" y="112" width="26" height="42" rx="12" fill="#a259ff"/><rect x="144" y="112" width="26" height="42" rx="12" fill="#a259ff"/><path d="M64 150v10a10 10 0 0 0 10 10h8" fill="none" stroke="#a259ff" strokeWidth="7" strokeLinecap="round"/></svg>
+  ),
+  presente: (
+    <svg viewBox="0 0 200 200"><rect x="45" y="90" width="110" height="80" rx="6" fill="#ff2d4d"/><rect x="45" y="90" width="110" height="22" fill="#e01438"/><rect x="92" y="90" width="16" height="80" fill="#ffce54"/><path d="M100 90c-10-24-40-24-40-4 0 4 18 4 40 4z" fill="#ffce54"/><path d="M100 90c10-24 40-24 40-4 0 4-18 4-40 4z" fill="#ffce54"/></svg>
+  ),
+  escudo: (
+    <svg viewBox="0 0 200 200"><path d="M100 25l55 20v45c0 45-25 75-55 85-30-10-55-40-55-85V45z" fill="#3ecf8e"/><path d="M100 45l35 13v30c0 30-16 50-35 57-19-7-35-27-35-57V58z" fill="#1a1a1f"/><path d="M85 100l10 12 22-26" fill="none" stroke="#3ecf8e" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+  ),
+  caminhao: (
+    <svg viewBox="0 0 200 200"><rect x="30" y="90" width="80" height="45" rx="4" fill="#3ea6ff"/><path d="M110 105h30l24 20v10h-54z" fill="#8ac4ff"/><circle cx="60" cy="140" r="14" fill="#1a1a1f"/><circle cx="60" cy="140" r="6" fill="#8a8d96"/><circle cx="140" cy="140" r="14" fill="#1a1a1f"/><circle cx="140" cy="140" r="6" fill="#8a8d96"/></svg>
+  ),
+  joystick: (
+    <svg viewBox="0 0 200 200"><rect x="70" y="120" width="60" height="45" rx="10" fill="#1a1a1f" stroke="#ff2d4d" strokeWidth="4"/><rect x="90" y="70" width="20" height="55" rx="8" fill="#ff2d4d"/><circle cx="100" cy="65" r="22" fill="#ff2d4d"/><circle cx="86" cy="140" r="7" fill="#ff2d4d"/><circle cx="114" cy="140" r="7" fill="#3ea6ff"/></svg>
+  ),
+  grafico: (
+    <svg viewBox="0 0 200 200"><rect x="45" y="120" width="24" height="45" rx="4" fill="#3ecf8e"/><rect x="88" y="90" width="24" height="75" rx="4" fill="#3ea6ff"/><rect x="131" y="60" width="24" height="105" rx="4" fill="#ff2d4d"/></svg>
+  ),
+};
+
+function PageArt({ variant, side = "right", size = 200, top = 10 }) {
+  if (!variant) return null;
+  const conteudo = variant === "mascote" ? <img src={mascoteImg} alt="" /> : PAGE_ART_SVG[variant];
+  if (!conteudo) return null;
+  return (
+    <div
+      className={`page-art page-art-${side}`}
+      style={{ width: size, top }}
+      aria-hidden="true"
+    >
+      {conteudo}
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────
 // TOAST
@@ -1050,6 +1105,7 @@ function RelatorioPDF({ dados }) {
 
   return (
     <div>
+      <PageArt variant="grafico" size={170} />
       <div className="page-header">
         <div><h1 className="page-title">Relatório PDF</h1><p className="page-sub">Relatório financeiro completo com gráfico e ranking</p></div>
         <button className="btn btn-primary" onClick={gerarPDF}><Icon name="download" />Gerar e Imprimir PDF</button>
@@ -1348,6 +1404,7 @@ function Dashboard({ dados }) {
 
   return (
     <div>
+      <PageArt variant="mascote" size={240} top={-10} />
       <div className="page-header">
         <div><h1 className="page-title">Painel de Controle</h1><p className="page-sub">Visão geral do seu negócio em tempo real</p></div>
         <button
@@ -1361,10 +1418,10 @@ function Dashboard({ dados }) {
         </button>
       </div>
       <div className="stats-grid">
-        <div className="stat-card green"><div className="stat-label">Receitas Totais</div><div className="stat-value">{val(totalReceitas)}</div></div>
-        <div className="stat-card red"><div className="stat-label">Despesas Totais</div><div className="stat-value">{val(totalDespesas)}</div></div>
-        <div className={`stat-card ${saldo >= 0 ? "blue" : "red"}`}><div className="stat-label">Saldo Líquido</div><div className="stat-value">{val(saldo)}</div></div>
-        <div className="stat-card gold"><div className="stat-label">Hoje</div><div className="stat-value">{hojeCount}</div><div className="stat-sub">Transações</div></div>
+        <div className="stat-card green"><div className="stat-label">💰 Receitas Totais</div><div className="stat-value">{val(totalReceitas)}</div></div>
+        <div className="stat-card red"><div className="stat-label">📉 Despesas Totais</div><div className="stat-value">{val(totalDespesas)}</div></div>
+        <div className={`stat-card ${saldo >= 0 ? "blue" : "red"}`}><div className="stat-label">🏆 Saldo Líquido</div><div className="stat-value">{val(saldo)}</div></div>
+        <div className="stat-card gold"><div className="stat-label">🎮 Hoje</div><div className="stat-value">{hojeCount}</div><div className="stat-sub">Transações</div></div>
       </div>
 
       {produtosAbaixo.length > 0 && <EstoqueCriticoCard produtos={produtosAbaixo} />}
@@ -1795,6 +1852,7 @@ function Transacoes({ dados, onRemover }) {
 
   return (
     <div>
+      <PageArt variant="moedas" size={170} />
       <div className="page-header"><div><h1 className="page-title">Transações</h1><p className="page-sub">Histórico completo</p></div></div>
       <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
         <input className="input" style={{ maxWidth: 260 }} placeholder="🔍 Buscar..." value={busca} onChange={e => setBusca(e.target.value)} />
@@ -1916,6 +1974,7 @@ function Estoque({ dados, onAdicionar, onRemover, onAtualizar, onAdicionarVarian
 
   return (
     <div>
+      <PageArt variant="controle" size={190} />
       <div className="page-header">
         <div><h1 className="page-title">Estoque</h1><p className="page-sub">Gerencie produtos e variantes</p></div>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -2179,6 +2238,7 @@ function Clientes({ dados, onAdicionar, onRemover, onAtualizar }) {
 
   return (
     <div>
+      <PageArt variant="headset" size={170} />
       <div className="page-header"><div><h1 className="page-title">Clientes</h1><p className="page-sub">Base de clientes — ordem alfabética</p></div><button className="btn btn-primary" onClick={() => abrirModal()}><Icon name="plus" /> Novo</button></div>
       <div style={{ marginBottom: 16 }}>
         <input className="input" style={{ maxWidth: 300 }} placeholder="🔍 Buscar cliente..." value={busca} onChange={e => setBusca(e.target.value)} />
@@ -2255,6 +2315,7 @@ function Fornecedores({ dados, onAdicionar, onRemover, onAtualizar }) {
 
   return (
     <div>
+      <PageArt variant="caminhao" size={180} />
       <div className="page-header"><div><h1 className="page-title">Fornecedores</h1><p className="page-sub">Cadastro de fornecedores e distribuidores</p></div><button className="btn btn-primary" onClick={() => abrirModal()}><Icon name="plus" /> Novo</button></div>
       <div style={{ marginBottom: 16 }}>
         <input className="input" style={{ maxWidth: 300 }} placeholder="🔍 Buscar fornecedor..." value={busca} onChange={e => setBusca(e.target.value)} />
@@ -2313,6 +2374,7 @@ function Categorias({ dados, onAdicionar, onRemover }) {
   }
   return (
     <div>
+      <PageArt variant="trofeu" size={160} />
       <div className="page-header"><div><h1 className="page-title">Categorias</h1></div><button className="btn btn-primary" onClick={() => setModal(true)}><Icon name="plus" /> Nova</button></div>
       <div className="card"><div className="table-wrap">
         {categorias.length === 0
@@ -2625,6 +2687,7 @@ function Encomendas({ encomendas, onAdicionar, onAtualizar, onRemover }) {
 
   return (
     <div>
+      <PageArt variant="presente" size={170} />
       <div className="page-header">
         <div><h1 className="page-title">Encomendas</h1><p className="page-sub">Pedidos sob encomenda dos clientes</p></div>
         <button className="btn btn-primary" onClick={() => abrirModal()}><Icon name="plus" />Nova Encomenda</button>
@@ -2837,6 +2900,7 @@ function Fiado({ fiados, onAdicionar, onPagar, onPagarParcial, onRemover, dados 
 
   return (
     <div>
+      <PageArt variant="escudo" size={170} />
       <div className="page-header">
         <div><h1 className="page-title">Fiado / Cobranças</h1><p className="page-sub">Controle de valores em aberto e lembretes de cobrança</p></div>
         <button className="btn btn-primary" onClick={abrirModal}><Icon name="plus" />Novo Fiado</button>
@@ -3059,7 +3123,6 @@ const NAV_BASE = [
   { id: "despesa", label: "Nova Despesa", icon: "expense", group: "Principal" },
   { id: "transacoes", label: "Transações", icon: "categories", group: "Dados" },
   { id: "estoque", label: "Estoque", icon: "stock", group: "Dados" },
-  { id: "compras", label: "Compras", icon: "cart", group: "Dados" },
   { id: "encomendas", label: "Encomendas", icon: "inbox", group: "Dados" },
   { id: "fiado", label: "Fiado / Cobranças", icon: "warn", group: "Dados" },
   { id: "clientes", label: "Clientes", icon: "clients", group: "Dados" },
@@ -3369,6 +3432,7 @@ export default function App() {
     if (page === "painel") return <Dashboard dados={dados} />;
     if (page === "venda") return (
       <div>
+        <PageArt variant="joystick" size={170} />
         <div className="page-header"><div><h1 className="page-title">Nova Venda</h1><p className="page-sub">Monte o carrinho e finalize a venda</p></div></div>
         <CarrinhoVenda dados={dados} onSalvar={adicionarVendaCarrinho} onCancelar={() => setPage("painel")} />
       </div>
