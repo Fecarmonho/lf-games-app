@@ -1847,6 +1847,14 @@ function Estoque({ dados, onAdicionar, onRemover, onAtualizar, onAdicionarVarian
 
   const produtos = dados.produtos || [];
   const variantesProduto = dados.variantesProduto || [];
+  const categoriasDisponiveis = useMemo(() => {
+    const usadas = produtos.map(p => p.categoria).filter(Boolean);
+    return [...new Set([...CATEGORIAS_PRODUTO, ...usadas])].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [produtos]);
+  const consolesDisponiveis = useMemo(() => {
+    const usados = produtos.map(p => p.console).filter(Boolean);
+    return [...new Set([...CONSOLES_PRODUTO, ...usados])].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [produtos]);
   const pc = parseFloat(form.precoCompra) || 0;
   const pv = parseFloat(form.precoVenda) || 0;
   const margemForm = pc > 0 && pv > 0 ? ((pv - pc) / pc * 100) : null;
@@ -2026,17 +2034,17 @@ function Estoque({ dados, onAdicionar, onRemover, onAtualizar, onAdicionarVarian
             <div className="input-group" style={{ gridColumn: "1 / -1" }}><label className="input-label">Nome *</label><input className="input" value={form.nome} onChange={e => set("nome", e.target.value)} /></div>
             <div className="input-group">
               <label className="input-label">Categoria</label>
-              <select className="input" value={form.categoria} onChange={e => set("categoria", e.target.value)}>
-                <option value="">Selecione…</option>
-                {CATEGORIAS_PRODUTO.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+              <input className="input" list="dlist-categorias" placeholder="Escolha ou digite uma nova…" value={form.categoria} onChange={e => set("categoria", e.target.value)} />
+              <datalist id="dlist-categorias">
+                {categoriasDisponiveis.map(c => <option key={c} value={c} />)}
+              </datalist>
             </div>
             <div className="input-group">
               <label className="input-label">Console / Plataforma</label>
-              <select className="input" value={form.console} onChange={e => set("console", e.target.value)}>
-                <option value="">Selecione…</option>
-                {CONSOLES_PRODUTO.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+              <input className="input" list="dlist-consoles" placeholder="Escolha ou digite um novo…" value={form.console} onChange={e => set("console", e.target.value)} />
+              <datalist id="dlist-consoles">
+                {consolesDisponiveis.map(c => <option key={c} value={c} />)}
+              </datalist>
             </div>
             <div className="input-group"><label className="input-label">Marca</label><input className="input" placeholder="Sony, Microsoft, Logitech…" value={form.marca} onChange={e => set("marca", e.target.value)} /></div>
             <div className="input-group">
@@ -3124,8 +3132,10 @@ const CATEGORIAS_PRODUTO = [
 
 // Consoles / plataformas
 const CONSOLES_PRODUTO = [
-  "PlayStation 5", "PlayStation 4", "Xbox Series X/S", "Xbox One",
-  "Nintendo Switch", "Nintendo Switch 2", "PC", "Multiplataforma", "Não se aplica",
+  "PlayStation 5", "PlayStation 4", "PlayStation 1,2,3", "Xbox Series X/S", "Xbox One",
+  "Xbox 360", "Xbox Clássico", "Nintendo Switch", "Nintendo Switch 2", "Nintendo 64",
+  "Super Nintendo SNES", "Nintendo NES", "Wii", "Wii U", "Mega Drive", "Master Sistem",
+  "Sega Saturn", "Dreamcast", "Atari", "Dynavision", "PC", "Multiplataforma", "Não se aplica",
 ];
 
 // Condição do produto
