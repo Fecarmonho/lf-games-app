@@ -2,8 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import logoImg from "./logo.png";
 
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, doc, onSnapshot, setDoc, deleteDoc } from "firebase/firestore";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "firebase/auth";
+import { getFirestore, collection, doc, onSnapshot, setDoc, deleteDoc, getDocs } from "firebase/firestore";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBIr9egtBxjjdXaIMGLKYlxsyitz4Vx_vk",
@@ -503,6 +503,113 @@ function SplashScreen() {
         <div className="splash-name">LF GAMES</div>
         <div className="splash-tagline">JOGUE. VENÇA. DIVIRTA-SE.</div>
         <div className="splash-spinner" />
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// LOGIN
+// ─────────────────────────────────────────────
+function LoginScreen({ primeiroAcesso }) {
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
+  const [confirmar, setConfirmar] = useState("");
+  const [nome, setNome] = useState("");
+  const [show, setShow] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState("");
+
+  async function entrar(e) {
+    e.preventDefault();
+    setErro("");
+    if (!email.trim() || !senha.trim()) return setErro("Preencha e-mail e senha.");
+    setLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, email.trim(), senha);
+    } catch (err) {
+      const msgs = {
+        "auth/user-not-found": "E-mail não cadastrado.",
+        "auth/wrong-password": "Senha incorreta.",
+        "auth/invalid-email": "E-mail inválido.",
+        "auth/invalid-credential": "E-mail ou senha incorretos.",
+        "auth/too-many-requests": "Muitas tentativas. Tente mais tarde.",
+      };
+      setErro(msgs[err.code] || "Erro ao entrar.");
+    } finally { setLoading(false); }
+  }
+
+  async function criarDono(e) {
+    e.preventDefault();
+    setErro("");
+    if (!nome.trim()) return setErro("Digite seu nome.");
+    if (!email.trim()) return setErro("Digite seu e-mail.");
+    if (senha.length < 6) return setErro("Senha deve ter no mínimo 6 caracteres.");
+    if (senha !== confirmar) return setErro("As senhas não conferem.");
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${auth.app.options.apiKey}`,
+        { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email.trim(), password: senha, returnSecureToken: true }) }
+      );
+      const data = await res.json();
+      if (data.error) { const msgs = { "EMAIL_EXISTS": "E-mail já cadastrado.", "WEAK_PASSWORD": "Senha fraca." }; throw new Error(msgs[data.error.message] || data.error.message); }
+      // grava o perfil antes de entrar: ao entrar, o App exige que ele exista
+      await setDoc(doc(db, "usuarios", data.localId), { uid: data.localId, nome: nome.trim(), email: email.trim(), cargo: "dono", criadoEm: new Date().toISOString() });
+      await signInWithEmailAndPassword(auth, email.trim(), senha);
+    } catch (err) { setErro(err.message || "Erro ao criar conta."); setLoading(false); }
+  }
+
+  return (
+    <div className="login-page">
+      <div className="login-bg">
+        <div className="login-blob" style={{ width: 500, height: 500, background: "#ff2d4d", top: -150, right: -150 }} />
+        <div className="login-blob" style={{ width: 400, height: 400, background: "#3ea6ff", bottom: -100, left: -100 }} />
+      </div>
+      <div className="login-card">
+        <div className="login-logo">
+          <div className="login-logo-img"><img src={logoImg} alt="LF Games" /></div>
+          <div className="login-logo-text"><h1>LF GAMES</h1><p>Sistema de Gestão</p></div>
+        </div>
+        {primeiroAcesso ? (
+          <>
+            <div style={{ background: "rgba(255,45,77,0.08)", border: "1px solid rgba(255,45,77,0.25)", borderRadius: "var(--radius-sm)", padding: "10px 14px", fontSize: 13, color: "var(--accent)", marginBottom: 20 }}>
+              👋 Primeira vez? Crie a conta do dono.
+            </div>
+            {erro && <div className="login-error">⚠️ {erro}</div>}
+            <form onSubmit={criarDono}>
+              <div className="form-grid" style={{ gap: 14 }}>
+                <div className="input-group"><label className="input-label">Nome</label><input className="input" placeholder="Seu nome" value={nome} onChange={e => setNome(e.target.value)} /></div>
+                <div className="input-group"><label className="input-label">E-mail</label><input className="input" type="email" value={email} onChange={e => setEmail(e.target.value)} /></div>
+                <div className="input-group"><label className="input-label">Senha</label>
+                  <div style={{ position: "relative" }}>
+                    <input className="input" type={show ? "text" : "password"} value={senha} onChange={e => setSenha(e.target.value)} style={{ paddingRight: 40 }} />
+                    <button type="button" onClick={() => setShow(!show)} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text2)", cursor: "pointer" }}><Icon name={show ? "eyeoff" : "eye"} size={16} /></button>
+                  </div>
+                </div>
+                <div className="input-group"><label className="input-label">Confirmar Senha</label><input className="input" type={show ? "text" : "password"} value={confirmar} onChange={e => setConfirmar(e.target.value)} /></div>
+                <button className="btn btn-primary" type="submit" disabled={loading} style={{ width: "100%", padding: "11px" }}><Icon name="check" />{loading ? "Criando..." : "Criar Conta"}</button>
+              </div>
+            </form>
+          </>
+        ) : (
+          <>
+            {erro && <div className="login-error">⚠️ {erro}</div>}
+            <form onSubmit={entrar}>
+              <div className="form-grid" style={{ gap: 14 }}>
+                <div className="input-group"><label className="input-label">E-mail</label><input className="input" type="email" value={email} onChange={e => setEmail(e.target.value)} /></div>
+                <div className="input-group"><label className="input-label">Senha</label>
+                  <div style={{ position: "relative" }}>
+                    <input className="input" type={show ? "text" : "password"} value={senha} onChange={e => setSenha(e.target.value)} style={{ paddingRight: 40 }} />
+                    <button type="button" onClick={() => setShow(!show)} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text2)", cursor: "pointer" }}><Icon name={show ? "eyeoff" : "eye"} size={16} /></button>
+                  </div>
+                </div>
+                <button className="btn btn-primary" type="submit" disabled={loading} style={{ width: "100%", padding: "11px" }}><Icon name="lock" />{loading ? "Entrando..." : "Entrar"}</button>
+              </div>
+            </form>
+          </>
+        )}
       </div>
     </div>
   );
@@ -3077,9 +3184,10 @@ const NAV_BASE = [
   { id: "categorias", label: "Categorias", icon: "categories", group: "Dados" },
   { id: "relatorio", label: "Relatório PDF", icon: "pdf", group: "Dados" },
 ];
+const NAV_DONO = [{ id: "usuarios", label: "Usuários", icon: "clients", group: "Admin" }];
 
-function Sidebar({ page, onNavigate, open, onClose }) {
-  const navItems = NAV_BASE;
+function Sidebar({ page, onNavigate, open, onClose, onLogout, perfil, isDono }) {
+  const navItems = isDono ? [...NAV_BASE, ...NAV_DONO] : NAV_BASE;
   const groups = [...new Set(navItems.map(i => i.group))];
   return (
     <>
@@ -3102,9 +3210,18 @@ function Sidebar({ page, onNavigate, open, onClose }) {
           ))}
         </nav>
         <div className="sidebar-footer">
+          {perfil && (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", marginBottom: 8, background: "var(--surface2)", borderRadius: "var(--radius-sm)" }}>
+              <div style={{ width: 30, height: 30, borderRadius: "50%", background: perfil.cargo === "dono" ? "rgba(255,45,77,0.2)" : "rgba(62,166,255,0.15)", color: perfil.cargo === "dono" ? "var(--accent)" : "var(--blue)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 13 }}>
+                {(perfil.nome || "?")[0].toUpperCase()}
+              </div>
+              <div><div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>{perfil.nome}</div><div style={{ fontSize: 10, color: perfil.cargo === "dono" ? "var(--accent)" : "var(--blue)", textTransform: "capitalize" }}>{perfil.cargo}</div></div>
+            </div>
+          )}
           <div style={{ display: "flex", alignItems: "center", padding: "4px 12px 8px", fontSize: 11, color: "var(--text2)" }}>
             <Icon name="sync" size={12} /><span style={{ marginLeft: 6 }}>Firebase — tempo real</span><div className="sync-dot" />
           </div>
+          <button className="footer-btn danger" onClick={onLogout}><Icon name="lock" size={14} />Sair</button>
         </div>
       </aside>
     </>
@@ -3165,26 +3282,43 @@ function useCollection(colName) {
 // ─────────────────────────────────────────────
 export default function App() {
   const [usuario, setUsuario] = useState(null);
+  const [perfil, setPerfil] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [page, setPage] = useState("painel");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
+  const [primeiroAcesso, setPrimeiroAcesso] = useState(false);
 
   useEffect(() => {
+    let unsubPerfil = null;
     const unsub = onAuthStateChanged(auth, async (u) => {
+      if (unsubPerfil) { unsubPerfil(); unsubPerfil = null; }
+      setUsuario(u);
       if (u) {
-        setUsuario(u);
-        setAuthLoading(false);
+        // Escuta o próprio perfil em tempo real: se ele for removido em
+        // "Usuários", o acesso cai na hora, mesmo com o sistema já aberto.
+        unsubPerfil = onSnapshot(
+          doc(db, "usuarios", u.uid),
+          (snap) => {
+            if (!snap.exists()) { setPerfil(null); signOut(auth); return; }
+            setPerfil({ id: snap.id, ...snap.data() });
+            setPrimeiroAcesso(false);
+            setAuthLoading(false);
+          },
+          () => setAuthLoading(false)
+        );
       } else {
-        try {
-          await signInAnonymously(auth);
-        } catch {
-          setAuthLoading(false);
-        }
+        setPerfil(null);
+        try { const snap = await getDocs(collection(db, "usuarios")); setPrimeiroAcesso(snap.empty); } catch { setPrimeiroAcesso(false); }
+        setAuthLoading(false);
       }
     });
-    return unsub;
+    return () => { unsub(); if (unsubPerfil) unsubPerfil(); };
   }, []);
+
+  const isDono = perfil?.cargo === "dono";
+
+  async function handleLogout() { await signOut(auth); setPage("painel"); }
 
   useEffect(() => {
     const t = setTimeout(() => setShowSplash(false), 2200);
@@ -3375,6 +3509,7 @@ export default function App() {
       <SplashScreen />
     </>
   );
+  if (!usuario) return (<><style>{CSS}</style><LoginScreen primeiroAcesso={primeiroAcesso} /><ToastContainer /></>);
   if (loading) return (<><style>{CSS}</style><div className="loading-screen"><div className="spinner" /><p style={{ color: "var(--text2)", fontSize: 13 }}>Carregando dados...</p></div></>);
 
   function renderPage() {
@@ -3400,7 +3535,7 @@ export default function App() {
     if (page === "compras") return <Compras compras={compras} fornecedores={fornecedores} onAdicionar={adicionarCompra} onReceber={receberCompra} onRemover={removerCompra} />;
     if (page === "encomendas") return <Encomendas encomendas={encomendas} onAdicionar={adicionarEncomenda} onAtualizar={atualizarEncomenda} onRemover={removerEncomenda} />;
     if (page === "fiado") return <Fiado fiados={fiados} onAdicionar={adicionarFiado} onPagar={pagarFiado} onPagarParcial={pagarParcialFiado} onRemover={removerFiado} dados={dados} />;
-
+    if (page === "usuarios" && isDono) return <GerenciarUsuarios usuarioAtual={usuario} />;
   }
 
   return (
@@ -3414,7 +3549,7 @@ export default function App() {
             <span className="mobile-logo-name">LF GAMES</span>
           </div>
         </div>
-        <Sidebar page={page} onNavigate={setPage} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <Sidebar page={page} onNavigate={setPage} open={sidebarOpen} onClose={() => setSidebarOpen(false)} onLogout={handleLogout} perfil={perfil} isDono={isDono} />
         <main className="main"><div className="page">{renderPage()}</div></main>
       </div>
       <ToastContainer />
