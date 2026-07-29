@@ -2,8 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import logoImg from "./logo.png";
 
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, doc, onSnapshot, setDoc, deleteDoc, getDocs } from "firebase/firestore";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
+import { getFirestore, collection, doc, onSnapshot, setDoc, deleteDoc, getDocs, getDoc } from "firebase/firestore";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBIr9egtBxjjdXaIMGLKYlxsyitz4Vx_vk",
@@ -548,17 +548,19 @@ function LoginScreen({ primeiroAcesso }) {
     if (senha !== confirmar) return setErro("As senhas não conferem.");
     setLoading(true);
     try {
-      const res = await fetch(
-        `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${auth.app.options.apiKey}`,
-        { method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: email.trim(), password: senha, returnSecureToken: true }) }
-      );
-      const data = await res.json();
-      if (data.error) { const msgs = { "EMAIL_EXISTS": "E-mail já cadastrado.", "WEAK_PASSWORD": "Senha fraca." }; throw new Error(msgs[data.error.message] || data.error.message); }
-      // grava o perfil antes de entrar: ao entrar, o App exige que ele exista
-      await setDoc(doc(db, "usuarios", data.localId), { uid: data.localId, nome: nome.trim(), email: email.trim(), cargo: "dono", criadoEm: new Date().toISOString() });
-      await signInWithEmailAndPassword(auth, email.trim(), senha);
-    } catch (err) { setErro(err.message || "Erro ao criar conta."); setLoading(false); }
+      // Cria a conta e já loga o usuário pelo SDK (assim a gravação abaixo
+      // acontece autenticada, do jeito que as regras do Firestore esperam).
+      const cred = await createUserWithEmailAndPassword(auth, email.trim(), senha);
+      await setDoc(doc(db, "usuarios", cred.user.uid), { uid: cred.user.uid, nome: nome.trim(), email: email.trim(), cargo: "dono", criadoEm: new Date().toISOString() });
+    } catch (err) {
+      const msgs = {
+        "auth/email-already-in-use": "E-mail já cadastrado.",
+        "auth/weak-password": "Senha fraca.",
+        "auth/invalid-email": "E-mail inválido.",
+      };
+      setErro(msgs[err.code] || err.message || "Erro ao criar conta.");
+      setLoading(false);
+    }
   }
 
   return (
@@ -3300,7 +3302,17 @@ export default function App() {
         unsubPerfil = onSnapshot(
           doc(db, "usuarios", u.uid),
           (snap) => {
-            if (!snap.exists()) { setPerfil(null); signOut(auth); return; }
+            if (!snap.exists()) {
+              // O perfil pode ainda estar sendo gravado (ex: acabou de criar
+              // a conta agora mesmo). Dá uma segunda chance antes de deslogar.
+              setTimeout(async () => {
+                try {
+                  const retry = await getDoc(doc(db, "usuarios", u.uid));
+                  if (!retry.exists()) { setPerfil(null); signOut(auth); }
+                } catch { setPerfil(null); signOut(auth); }
+              }, 1500);
+              return;
+            }
             setPerfil({ id: snap.id, ...snap.data() });
             setPrimeiroAcesso(false);
             setAuthLoading(false);
