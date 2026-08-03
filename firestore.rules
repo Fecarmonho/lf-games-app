@@ -2,10 +2,40 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Permite leitura/escrita em todas as coleções do app
-    // apenas para usuários autenticados (login feito no sistema).
-    match /{collection}/{docId} {
-      allow read, write: if request.auth != null;
+
+    // Faz parte da equipe quem tem um documento na coleção "usuarios" com o
+    // próprio uid. O site da loja entra com login anônimo e NÃO passa por
+    // aqui — anônimo só consegue o que estiver liberado explicitamente
+    // abaixo.
+    function equipe() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid));
+    }
+
+    // O catálogo da loja precisa destas duas coleções sem login.
+    // Leitura para todo mundo, escrita só para a equipe.
+    match /produtos/{doc} {
+      allow read: if true;
+      allow write: if equipe();
+    }
+    match /siteFotos/{doc} {
+      allow read: if true;
+      allow write: if equipe();
+    }
+
+    // Todo o resto — vendas, transações, clientes, fiado, fornecedores,
+    // encomendas, variantes e a própria lista de usuários — só para a
+    // equipe logada.
+    match /{document=**} {
+      allow read, write: if equipe();
     }
   }
 }
+
+// ATENÇÃO ao cadastrar o PRIMEIRO usuário de um projeto novo:
+// estas regras exigem que já exista um documento em "usuarios" com o uid de
+// quem escreve. Num banco vazio, ninguém passa nesse teste e a criação do
+// primeiro dono falha. Nesse caso, crie o documento à mão no console do
+// Firebase (coleção "usuarios", ID = uid do usuário, com os campos uid,
+// nome, email e cargo: "dono") e depois volte a usar o sistema
+// normalmente.
