@@ -304,6 +304,17 @@ const CSS = `
   .splash-spinner { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border2); border-top-color: var(--accent); animation: spin 0.8s linear infinite; margin-top: 6px; }
   @keyframes splashIn { from { opacity: 0; transform: translateY(8px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
   .spinner { width:32px; height:32px; border:3px solid var(--border2); border-top-color:var(--accent); border-radius:50%; animation:spin 0.7s linear infinite; }
+
+  /* Fotos do Site — capa de cada console */
+  .capas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
+  .capa-item { border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; background: var(--surface2); }
+  .capa-thumb { position: relative; height: 120px; background: var(--surface3); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .capa-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .capa-tag { position: absolute; bottom: 6px; left: 6px; background: rgba(0,0,0,0.65); color: var(--text2); font-size: 9.5px; font-weight: 600; padding: 3px 7px; border-radius: 999px; }
+  .capa-info { padding: 12px 13px 14px; }
+  .capa-nome { font-size: 14px; font-weight: 700; color: var(--text); }
+  .capa-qtd { font-size: 11.5px; color: var(--text2); margin-top: 2px; }
+  .capa-acoes { display: flex; gap: 8px; margin-top: 11px; flex-wrap: wrap; }
   @keyframes spin { to{transform:rotate(360deg)} }
 
   .produto-pai-row td { background: var(--surface); }
@@ -414,6 +425,7 @@ const Icon = ({ name, size = 16 }) => {
     inbox: <path d="M19 3H4.99C3.89 3 3 3.9 3 5L3 19c0 1.1.89 2 1.99 2H19c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 12h-4c0 1.66-1.34 3-3 3s-3-1.34-3-3H4.99V5H19v10z" fill="currentColor"/>,
     handshake: <path d="M11 5L6 9H2v6h4l5 4V5zm7.54 1.46a7 7 0 0 1 0 9.9l-1.41-1.41a5 5 0 0 0 0-7.07l1.41-1.42zM15.71 8.3a3 3 0 0 1 0 4.24l-1.42-1.42a1 1 0 0 0 0-1.41L15.71 8.3z" fill="currentColor"/>,
     balanco: <path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z" fill="currentColor"/>,
+    external: <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z" fill="currentColor"/>,
   };
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -3186,7 +3198,156 @@ const NAV_BASE = [
   { id: "categorias", label: "Categorias", icon: "categories", group: "Dados" },
   { id: "relatorio", label: "Relatório PDF", icon: "pdf", group: "Dados" },
 ];
-const NAV_DONO = [{ id: "usuarios", label: "Usuários", icon: "clients", group: "Admin" }];
+// ─────────────────────────────────────────────
+// FOTOS DO SITE — capa de cada console no catálogo
+// ─────────────────────────────────────────────
+/**
+ * Mesma regra de agrupamento usada no site: o console é digitado à mão,
+ * então "Playstation 4" e "PlayStation 4" precisam cair no mesmo card.
+ * Se mudar aqui, tem que mudar lá também.
+ */
+function chaveConsole(nome) {
+  return (nome || "")
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
+function FotosSite({ dados }) {
+  const produtos = dados.produtos || [];
+  const [capas, loadingCapas] = useCollection("siteFotos");
+  const [enviando, setEnviando] = useState(null);
+  const [confirmRemover, setConfirmRemover] = useState(null);
+
+  // Um item por console que tem produto cadastrado — a mesma lista que o
+  // cliente vê no site.
+  const consoles = useMemo(() => {
+    const mapa = new Map();
+    for (const p of produtos) {
+      const nome = (p.console || "").trim();
+      if (!nome || nome === "Não se aplica") continue;
+      const chave = chaveConsole(nome);
+      const atual = mapa.get(chave) || { chave, total: 0, grafias: new Map(), fotoProduto: null };
+      atual.total += 1;
+      atual.grafias.set(nome, (atual.grafias.get(nome) || 0) + 1);
+      if (!atual.fotoProduto && p.imagem) atual.fotoProduto = p.imagem;
+      mapa.set(chave, atual);
+    }
+    return [...mapa.values()]
+      .map(c => ({ ...c, nome: [...c.grafias.entries()].sort((a, b) => b[1] - a[1])[0][0] }))
+      .sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome, "pt-BR"));
+  }, [produtos]);
+
+  const capaDe = (chave) => capas.find(c => c.tipo === "console" && c.chave === chave);
+
+  async function enviarCapa(chave, nome, e) {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return toast("Selecione um arquivo de imagem", "error");
+    setEnviando(chave);
+    try {
+      // O card do catálogo é pequeno, mas a tela do celular desenha 2 a 3
+      // pixels para cada ponto — 640px deixa nítido sem pesar.
+      const imagem = await lerImagemComoBase64(file, 640, 0.72);
+      const existente = capaDe(chave);
+      const id = existente ? existente.id : uid();
+      await setDoc(doc(db, "siteFotos", id), {
+        id, tipo: "console", chave, nome, imagem,
+        criadoEm: existente?.criadoEm || new Date().toISOString(),
+      });
+      toast("Capa atualizada ✓");
+    } catch {
+      toast("Não foi possível carregar essa imagem", "error");
+    } finally {
+      setEnviando(null);
+    }
+  }
+
+  return (
+    <div>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Fotos do Site</h1>
+          <p className="page-sub">A capa de cada console no catálogo da loja — muda no site em tempo real</p>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-body">
+          <p style={{ fontSize: 13, color: "var(--text2)", marginBottom: 18, lineHeight: 1.6 }}>
+            No site, o catálogo abre com um card por console. Sem capa escolhida, o card
+            usa a foto de um produto daquele console — escolher uma capa aqui deixa a
+            vitrine com a sua cara.
+          </p>
+
+          {loadingCapas ? (
+            <div style={{ textAlign: "center", padding: 30 }}><div className="spinner" /></div>
+          ) : consoles.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px 0", color: "var(--text2)", fontSize: 13 }}>
+              Nenhum console cadastrado ainda. Cadastre produtos com o campo Console
+              preenchido e eles aparecem aqui.
+            </div>
+          ) : (
+            <div className="capas-grid">
+              {consoles.map(c => {
+                const capa = capaDe(c.chave);
+                const previa = capa?.imagem || c.fotoProduto;
+                return (
+                  <div key={c.chave} className="capa-item">
+                    <div className="capa-thumb">
+                      {enviando === c.chave
+                        ? <div className="spinner" style={{ width: 20, height: 20 }} />
+                        : previa
+                          ? <img src={previa} alt={c.nome} />
+                          : <span style={{ fontSize: 28 }}>🎮</span>}
+                      {!capa && previa && <span className="capa-tag">foto do produto</span>}
+                    </div>
+                    <div className="capa-info">
+                      <div className="capa-nome">{c.nome}</div>
+                      <div className="capa-qtd">{c.total} produto{c.total !== 1 ? "s" : ""}</div>
+                      <div className="capa-acoes">
+                        <label className="btn btn-sm btn-secondary" style={{ cursor: "pointer" }}>
+                          {capa ? "Trocar capa" : "Escolher capa"}
+                          <input type="file" accept="image/*" style={{ display: "none" }}
+                            onChange={e => enviarCapa(c.chave, c.nome, e)} />
+                        </label>
+                        {capa && (
+                          <button className="btn btn-sm btn-danger" onClick={() => setConfirmRemover(capa.id)}>
+                            Remover
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <ConfirmDialog
+        open={!!confirmRemover}
+        title="Remover capa?"
+        text="O card do console volta a usar a foto de um produto."
+        danger
+        onConfirm={async () => { await deleteDoc(doc(db, "siteFotos", confirmRemover)); setConfirmRemover(null); toast("Capa removida"); }}
+        onCancel={() => setConfirmRemover(null)}
+      />
+    </div>
+  );
+}
+
+// Endereço da loja — se o domínio mudar, é só trocar aqui
+const SITE_URL = "https://lf-games-site.vercel.app/";
+const NAV_DONO = [
+  { id: "fotosite", label: "Fotos do Site", icon: "eye", group: "Admin" },
+  { id: "versite", label: "Ver Site", icon: "external", group: "Admin", href: SITE_URL },
+  { id: "usuarios", label: "Usuários", icon: "clients", group: "Admin" },
+];
 
 function Sidebar({ page, onNavigate, open, onClose, onLogout, perfil, isDono }) {
   const navItems = isDono ? [...NAV_BASE, ...NAV_DONO] : NAV_BASE;
@@ -3204,9 +3365,16 @@ function Sidebar({ page, onNavigate, open, onClose, onLogout, perfil, isDono }) 
             <div key={g}>
               <div className="nav-label">{g}</div>
               {navItems.filter(i => i.group === g).map(item => (
-                <div key={item.id} className={`nav-item ${page === item.id ? "active" : ""}`} onClick={() => { onNavigate(item.id); onClose(); }}>
-                  <Icon name={item.icon} size={16} />{item.label}
-                </div>
+                item.href ? (
+                  // link externo (a loja) — abre em outra aba, não troca a página do ERP
+                  <a key={item.id} className="nav-item" href={item.href} target="_blank" rel="noopener noreferrer" onClick={onClose} style={{ textDecoration: "none" }}>
+                    <Icon name={item.icon} size={16} />{item.label}
+                  </a>
+                ) : (
+                  <div key={item.id} className={`nav-item ${page === item.id ? "active" : ""}`} onClick={() => { onNavigate(item.id); onClose(); }}>
+                    <Icon name={item.icon} size={16} />{item.label}
+                  </div>
+                )
               ))}
             </div>
           ))}
@@ -3547,6 +3715,7 @@ export default function App() {
     if (page === "compras") return <Compras compras={compras} fornecedores={fornecedores} onAdicionar={adicionarCompra} onReceber={receberCompra} onRemover={removerCompra} />;
     if (page === "encomendas") return <Encomendas encomendas={encomendas} onAdicionar={adicionarEncomenda} onAtualizar={atualizarEncomenda} onRemover={removerEncomenda} />;
     if (page === "fiado") return <Fiado fiados={fiados} onAdicionar={adicionarFiado} onPagar={pagarFiado} onPagarParcial={pagarParcialFiado} onRemover={removerFiado} dados={dados} />;
+    if (page === "fotosite" && isDono) return <FotosSite dados={dados} />;
     if (page === "usuarios" && isDono) return <GerenciarUsuarios usuarioAtual={usuario} />;
   }
 
